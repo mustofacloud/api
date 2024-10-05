@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const routes = require("./routes/routes");
+const { sendLogToDiscord } = require("./other/discordLogger");
 const config = require("./main/config");
 
 const app = express();
@@ -41,6 +42,7 @@ const enableMaintenanceMode = () => {
   // Check if maintenanceMode is already false
   if (!config.maintenanceMode) {
     const logMessage = "Maintenance mode disabled.";
+    sendLogToDiscord(logMessage, "Info");
     return;
   }
 
@@ -48,6 +50,8 @@ const enableMaintenanceMode = () => {
 
   const logBeforeMessage = "Maintenance mode about to be disabled.";
   const logAfterMessage = "Maintenance mode enabled.";
+  sendLogToDiscord(logBeforeMessage, "Info");
+  sendLogToDiscord(logAfterMessage, "Info");
 };
 
 enableMaintenanceMode();
