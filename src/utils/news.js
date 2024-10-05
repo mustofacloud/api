@@ -63,6 +63,10 @@ const fetchNewsDetail = async (berita_id) => {
   try {
     const response = await axios.get(url, axiosConfig);
 
+    // Log response data untuk debugging
+    console.log(`Fetching detail for: ${url}`);
+    console.log(response.data);
+
     const $ = cheerio.load(response.data);
     const detail = {};
 
@@ -71,14 +75,21 @@ const fetchNewsDetail = async (berita_id) => {
     $('p.MsoNormal').each((index, element) => {
       deskripsi += $(element).text().trim() + "\n"; // Gabungkan teks dari setiap paragraf dengan newline
     });
-    
     detail["deskripsi"] = deskripsi.trim(); // Trim deskripsi akhir untuk menghilangkan newline yang berlebihan
 
-    // Mengambil gambar jika ada
-    const gambar = $(".entry-news__image img").attr("src");
-    if (gambar) {
-      detail["gambar_url"] = gambar;
-    }
+    // Mengambil semua gambar dalam <span lang="EN-GB">
+    const gambarList = [];
+    $('span[lang="EN-GB"] img').each((index, element) => {
+      const gambar = {
+        title: $(element).attr('title'),
+        src: $(element).attr('src'),
+        width: $(element).attr('width'),
+        height: $(element).attr('height'),
+      };
+      gambarList.push(gambar);
+    });
+
+    detail["gambar"] = gambarList;
 
     return detail;
   } catch (error) {
@@ -86,6 +97,7 @@ const fetchNewsDetail = async (berita_id) => {
     return null;
   }
 };
+
 
 const fetchAndParseNews = async () => {
   try {
