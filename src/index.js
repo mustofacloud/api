@@ -41,7 +41,6 @@ const enableMaintenanceMode = () => {
   // Check if maintenanceMode is already false
   if (!config.maintenanceMode) {
     const logMessage = "Maintenance mode disabled.";
-    sendLogToDiscord(logMessage, "Info");
     return;
   }
 
