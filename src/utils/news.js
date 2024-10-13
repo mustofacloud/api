@@ -79,13 +79,22 @@ const fetchNewsDetail = async (berita_id) => {
 
     // Mengambil semua gambar dalam <span lang="EN-GB">
     const gambarList = [];
-    $('span[lang="EN"] img, span[lang="EN-GB"] img').each((index, element) => {
-      const gambar = {
-        title: $(element).attr('title'),
-        src: $(element).attr('src'),
-      };
-      gambarList.push(gambar);
-    });
+$('span[lang="EN-GB"], span[lang="EN"]').each((index, element) => {
+  let gambarElement = $(element).find('img'); // Coba ambil gambar di dalam span
+
+  // Jika tidak ada gambar di dalam <span>, cari gambar di elemen berikutnya
+  if (gambarElement.length === 0) {
+    gambarElement = $(element).next('img'); // Ambil gambar dari elemen berikutnya
+  }
+
+  gambarElement.each((i, img) => {
+    const gambar = {
+      title: $(img).attr('title'),
+      src: $(img).attr('src'),
+    };
+    gambarList.push(gambar);
+  });
+});
 
     detail["gambar"] = gambarList;
 
