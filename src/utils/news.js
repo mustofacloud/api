@@ -83,7 +83,7 @@ $('span[lang="EN-GB"], span[lang="EN"]').each((index, element) => {
   let gambarElement = $(element).find('img'); // Coba ambil gambar di dalam span
 
   // Jika tidak ada gambar di dalam <span>, cari gambar di elemen berikutnya
-  if (gambarElement.length === 0) {
+  if (gambarElement.length == $0) {
     gambarElement = $(element).next('img'); // Ambil gambar dari elemen berikutnya
   }
 
