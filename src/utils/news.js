@@ -79,7 +79,7 @@ const fetchNewsDetail = async (berita_id) => {
 
     // Mengambil semua gambar dalam <span lang="EN-GB">
     const gambarList = [];
-    $('span[lang="EN-GB"] img, span[lang="EN"] img').each((index, element) => {
+    $('span[lang="EN"] img, span[lang="EN-GB"] img').each((index, element) => {
       const gambar = {
         title: $(element).attr('title'),
         src: $(element).attr('src'),
