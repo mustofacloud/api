@@ -77,24 +77,26 @@ const fetchNewsDetail = async (berita_id) => {
     });
     detail["deskripsi"] = deskripsi.trim(); // Trim deskripsi akhir untuk menghilangkan newline yang berlebihan
 
-    // Mengambil semua gambar dalam <span lang="EN-GB">
     const gambarList = [];
-$('span[lang="EN-GB"], span[lang="EN"]').each((index, element) => {
-  let gambarElement = $(element).find('img'); // Coba ambil gambar di dalam span
 
-  // Jika tidak ada gambar di dalam <span>, cari gambar di elemen berikutnya
-  if (gambarElement.length == $0) {
-    gambarElement = $(element).next('img'); // Ambil gambar dari elemen berikutnya
-  }
+    $('span[lang="EN-GB"], span[lang="EN"]').each((index, element) => {
+      let gambarElement = $(element).find('img'); // Coba ambil gambar di dalam span
 
-  gambarElement.each((i, img) => {
-    const gambar = {
-      title: $(img).attr('title'),
-      src: $(img).attr('src'),
-    };
-    gambarList.push(gambar);
-  });
-});
+      // Jika tidak ada gambar di dalam <span>, cari gambar di elemen berikutnya
+      if (gambarElement.length === 0) {
+        gambarElement = $(element).next('img'); // Ambil gambar dari elemen berikutnya
+      }
+
+      gambarElement.each((i, img) => {
+        const gambar = {
+          title: $(img).attr('title'),
+          src: $(img).attr('src'),
+          width: $(img).attr('width'),
+          height: $(img).attr('height'),
+        };
+        gambarList.push(gambar);
+      });
+    });
 
     detail["gambar"] = gambarList;
 
