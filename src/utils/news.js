@@ -83,8 +83,6 @@ const fetchNewsDetail = async (berita_id) => {
       const gambar = {
         title: $(element).attr('title'),
         src: $(element).attr('src'),
-        width: $(element).attr('width'),
-        height: $(element).attr('height'),
       };
       gambarList.push(gambar);
     });
