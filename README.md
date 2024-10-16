@@ -12,7 +12,7 @@ Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
 
 ```bash
 # Clone the repository
-git clone https://github.com/Synxx12/JKT48-Scrape.git
+git clone [https://github.com/Synxx12/JKT48-Scrape.git](https://github.com/mastopa/web-scrape.git)
 
 # Navigate to the project directory
 cd JKT48-Scrape
