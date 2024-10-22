@@ -25,6 +25,7 @@ const parseData = (html) => {
     const birthdayMembers = $(element)
       .find('a[style="color:#616D9D"]')
       .map((i, el) => $(el).text().trim())
+      .get();
 
     if (showInfoFull.includes("Show")) {
       const showInfo = parseShowInfo(showInfoFull);
