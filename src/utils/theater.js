@@ -14,8 +14,8 @@ const parseData = (html) => {
   const scheduleData = [];
 
   table.find("tbody tr").each((index, element) => {
-    const showInfoFull = $(element).find("td:nth-child(2)").text().trim();
-    const setlist = $(element).find("td:nth-child(2)").text().trim();
+    const showInfoFull = $(element).find("td:nth-child(5)").text().trim();
+    const setlist = $(element).find("td:nth-child(5)").text().trim();
     const members = $(element)
       .find("td:nth-child(3) a")
       .map((i, el) => $(el).text().trim())
