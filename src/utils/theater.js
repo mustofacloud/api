@@ -23,17 +23,25 @@ const parseData = (html) => {
       .map((i, el) => $(el).text().trim())
       .get();
 
+    // Find members whose birthday is today (color: #616D9D)
+    const birthdayMembers = $(element)
+      .find('td[style="color:#616D9D"]')
+      .map((i, el) => $(el).text().trim())
+      .get();
+
     if (showInfoFull.includes("Show")) {
       const showInfo = parseShowInfo(showInfoFull);
       scheduleData.push({
         showInfo,
         setlist,
         members,
+        birthdayMembers, // Add birthday members
       });
     } else {
       scheduleData.push({
         showInfo: showInfoFull,
         setlist,
+        birthdayMembers,
         members: [],
       });
     }
