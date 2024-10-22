@@ -10,7 +10,9 @@ const fetchData = async () => {
 const parseData = (html) => {
   const $ = cheerio.load(html);
 
-  const table = $(".table");
+  // Target the table with specific selector
+  const table = $("body > div.container > div.row > div > div > div:nth-child(5) > div.table-responsive.table-pink__scroll table");
+
   const scheduleData = [];
 
   table.find("tbody tr").each((index, element) => {
