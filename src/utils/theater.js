@@ -22,10 +22,8 @@ const parseData = (html) => {
       .find("td:nth-child(3) a")
       .map((i, el) => $(el).text().trim())
       .get();
-
-    // Find members whose birthday is today (color: #616D9D)
     const birthdayMembers = $(element)
-      .find('td[style="color:#616D9D"]')
+      .find('a[style="color:#616D9D"]')
       .map((i, el) => $(el).text().trim())
       .get();
 
