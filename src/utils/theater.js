@@ -34,8 +34,8 @@ const parseData = (html) => {
       scheduleData.push({
         showInfo,
         setlist,
+        birthdayMembers,
         members,
-        birthdayMembers, // Add birthday members
       });
     } else {
       scheduleData.push({
