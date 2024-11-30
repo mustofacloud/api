@@ -79,11 +79,10 @@ const fetchNewsDetail = async (berita_id) => {
 
     let deskripsi = '';
     mainContent.find('p.MsoNormal, ul, ol').each((index, element) => {
+      deskripsi += $(element).text().trim() + "\n\n";
       const tagName = $(element).prop('tagName').toLowerCase();
 
       if (tagName === 'p') {
-        // Ambil teks langsung dari elemen <p>
-        deskripsi += $(element).text().trim() + '\n';
       } else if (tagName === 'ul' || tagName === 'ol') {
         // Tetap memproses elemen <ul> dan <ol> seperti biasa
         $(element).children().each((i, child) => {
