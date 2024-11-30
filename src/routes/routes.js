@@ -38,6 +38,10 @@ router.get("/news", async (req, res) => {
     const htmlData = await fetchNewsData();
     const newsData = parseNewsData(htmlData);
 
+    if (!newsData || !newsData.berita || newsData.berita.length === 0) {
+      throw new Error("No news data available for processing.");
+    }
+
     // Step 2: Fetch details for each news item
     const newsDetailsPromises = newsData.berita.map(async (item) => {
       const detail = await fetchNewsDetail(item.berita_id);
