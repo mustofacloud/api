@@ -69,25 +69,30 @@ const fetchNewsDetail = async (berita_id) => {
     const $ = cheerio.load(response.data);
     const detail = {};
 
-    // Mengambil deskripsi dari elemen <p class="MsoNormal">
+    // Menggabungkan deskripsi dari elemen <p>, <ul>, dan <ol>
     let deskripsi = "";
-    $('p.MsoNormal').each((index, element) => {
-      deskripsi += $(element).text().trim() + "\n";
-    });
+    const paragraphSelector = "p.MsoNormal, ul, ol";
 
-    // Mengambil elemen <ul> dan menggabungkan dengan deskripsi
-    $('ul').each((index, element) => {
-      const listItems = $(element).find('li.MsoNormal').map((i, li) => $(li).text().trim()).get();
-      if (listItems.length > 0) {
-        deskripsi += "\n" + listItems.join("\n") + "\n";
-      }
-    });
+    $(paragraphSelector).each((index, element) => {
+      const tagName = $(element).prop("tagName").toLowerCase();
 
-    // Mengambil elemen <ol> dan menambahkan daftar ke deskripsi
-    $('ol').each((index, element) => {
-      const listItems = $(element).find('li.MsoNormal').map((i, li) => `${i + 1}. ${$(li).text().trim()}`).get();
-      if (listItems.length > 0) {
-        deskripsi += "\n" + listItems.join("\n") + "\n";
+      if (tagName === "p") {
+        // Tambahkan teks dari <p>
+        deskripsi += $(element).text().trim() + "\n";
+      } else if (tagName === "ul") {
+        // Tambahkan daftar dari <ul>
+        $(element)
+          .find("li")
+          .each((i, li) => {
+            deskripsi += `- ${$(li).text().trim()}\n`;
+          });
+      } else if (tagName === "ol") {
+        // Tambahkan daftar bernomor dari <ol>
+        $(element)
+          .find("li")
+          .each((i, li) => {
+            deskripsi += `${i + 1}. ${$(li).text().trim()}\n`;
+          });
       }
     });
 
@@ -95,20 +100,20 @@ const fetchNewsDetail = async (berita_id) => {
 
     // Mengambil gambar
     const gambarList = [];
-    $('span[lang="EN-GB"], span[lang="EN"]').each((index, element) => {
-      let gambarElement = $(element).find('img');
+    $("span[lang='EN-GB'], span[lang='EN']").each((index, element) => {
+      let gambarElement = $(element).find("img");
 
       // Jika tidak ada gambar di dalam <span>, cari gambar di elemen berikutnya
       if (gambarElement.length === 0) {
-        gambarElement = $(element).next('img');
+        gambarElement = $(element).next("img");
       }
 
       gambarElement.each((i, img) => {
         const gambar = {
-          title: $(img).attr('title'),
-          src: $(img).attr('src'),
-          width: $(img).attr('width'),
-          height: $(img).attr('height'),
+          title: $(img).attr("title"),
+          src: $(img).attr("src"),
+          width: $(img).attr("width"),
+          height: $(img).attr("height"),
         };
         gambarList.push(gambar);
       });
