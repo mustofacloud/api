@@ -11,7 +11,7 @@ const fetchNewsData = async () => {
   const url = "https://jkt48.com/news/list?lang=id";
 
   try {
-    const response = await axios.get(url);
+    const response = await axios.get(url, axiosConfig);
     return response.data;
   } catch (error) {
     throw new Error(`Error fetching data: ${error.message}`);
@@ -20,15 +20,16 @@ const fetchNewsData = async () => {
 
 const parseNewsData = (html) => {
   const $ = cheerio.load(html);
-  const data = {};
   const list_berita_mentah = $(".entry-news__list");
-  const data_list_berita = [];
-  const size_of_berita = list_berita_mentah.length;
-  let position_berita = 0;
+  
+  if (!list_berita_mentah || list_berita_mentah.length === 0) {
+    throw new Error("No news data found on the page.");
+  }
 
-  while (position_berita < size_of_berita) {
+  const data_list_berita = [];
+  list_berita_mentah.each((index, element) => {
     const model = {};
-    const berita_mentah = list_berita_mentah.eq(position_berita);
+    const berita_mentah = $(element);
 
     const badge_div = berita_mentah.find(".entry-news__list--label");
     const badge_img = badge_div.find("img");
@@ -38,23 +39,25 @@ const parseNewsData = (html) => {
 
     const title_div = berita_mentah.find(".entry-news__list--item");
 
-    const waktu = title_div.find("time").text();
+    const waktu = title_div.find("time").text().trim();
     model["waktu"] = waktu;
 
-    const judul = title_div.find("h3").text();
+    const judul = title_div.find("h3").text().trim();
     model["judul"] = judul;
 
     const url_berita_full = title_div.find("h3").find("a").attr("href");
-    const url_berita_full_rplc = url_berita_full.replace("?lang=id", "");
-    const url_berita_full_rplc_2 = url_berita_full_rplc.replace("/news/detail/id/", "");
+    if (!url_berita_full) {
+      console.warn("Missing URL for a news item. Skipping.");
+      return; // Skip this news item
+    }
 
-    model["berita_id"] = url_berita_full_rplc_2;
+    const url_berita_full_rplc = url_berita_full.replace("?lang=id", "").replace("/news/detail/id/", "");
+    model["berita_id"] = url_berita_full_rplc;
+
     data_list_berita.push(model);
-    position_berita += 1;
-  }
+  });
 
-  data["berita"] = data_list_berita;
-  return data;
+  return { berita: data_list_berita };
 };
 
 const fetchNewsDetail = async (berita_id) => {
@@ -66,30 +69,38 @@ const fetchNewsDetail = async (berita_id) => {
     const $ = cheerio.load(response.data);
     const detail = {};
 
-    // Mengambil deskripsi dari semua elemen <p class="MsoNormal">
+    // Mengambil deskripsi dari elemen <p class="MsoNormal">
     let deskripsi = "";
     $('p.MsoNormal').each((index, element) => {
-      deskripsi += $(element).text().trim() + "\n"; // Gabungkan teks dari setiap paragraf dengan newline
+      deskripsi += $(element).text().trim() + "\n";
     });
 
     // Mengambil elemen <ul> dan menggabungkan dengan deskripsi
     $('ul').each((index, element) => {
       const listItems = $(element).find('li.MsoNormal').map((i, li) => $(li).text().trim()).get();
       if (listItems.length > 0) {
-        deskripsi += "\n" + listItems.join("\n") + "\n"; // Tambahkan list items ke deskripsi
+        deskripsi += "\n" + listItems.join("\n") + "\n";
       }
     });
 
-    detail["deskripsi"] = deskripsi.trim(); // Trim deskripsi akhir untuk menghilangkan newline yang berlebihan
+    // Mengambil elemen <ol> dan menambahkan daftar ke deskripsi
+    $('ol').each((index, element) => {
+      const listItems = $(element).find('li.MsoNormal').map((i, li) => `${i + 1}. ${$(li).text().trim()}`).get();
+      if (listItems.length > 0) {
+        deskripsi += "\n" + listItems.join("\n") + "\n";
+      }
+    });
+
+    detail["deskripsi"] = deskripsi.trim();
 
     // Mengambil gambar
     const gambarList = [];
     $('span[lang="EN-GB"], span[lang="EN"]').each((index, element) => {
-      let gambarElement = $(element).find('img'); // Coba ambil gambar di dalam span
+      let gambarElement = $(element).find('img');
 
       // Jika tidak ada gambar di dalam <span>, cari gambar di elemen berikutnya
       if (gambarElement.length === 0) {
-        gambarElement = $(element).next('img'); // Ambil gambar dari elemen berikutnya
+        gambarElement = $(element).next('img');
       }
 
       gambarElement.each((i, img) => {
@@ -112,15 +123,13 @@ const fetchNewsDetail = async (berita_id) => {
   }
 };
 
-
-
 const fetchAndParseNews = async () => {
   try {
     const html = await fetchNewsData();
-    const newsData = parseNewsData(html);
-    return newsData;
+    const parsedData = parseNewsData(html);
+    return parsedData;
   } catch (error) {
-    console.error(error.message);
+    console.error(`Error parsing news: ${error.message}`);
   }
 };
 
