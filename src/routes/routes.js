@@ -11,12 +11,108 @@ const { fetchMemberData, parseMemberData } = require("../utils/member");
 const { fetchBannerData, parseBannerData } = require("../utils/banner");
 const { fetchScheduleSectionData, parseScheduleSectionData } = require("../utils/schedule-section");
 const { fetchHtmlFromJKT48, parseVideoData } = require("../utils/video");
+const { filterIDNLivesByUsernames } = require("../utils/idnlivesUtils");
+const showroomService = require('../services/showroomService');
 const { sendLogToDiscord } = require("../other/discordLogger");
 
 const scrapeData = () => {
   // Simulating a scraping failure
   throw new Error("Scraping failed!");
 };
+
+const jkt48Usernames = [
+  "jkt48_freya",
+  "jkt48_ashel",
+  "jkt48_amanda",
+  "jkt48_gita",
+  "jkt48_lulu",
+  "jkt48_jessi",
+  "jkt48_shani",
+  "jkt48_raisha",
+  "jkt48_muthe",
+  "jkt48_chika",
+  "jkt48_christy",
+  "jkt48_lia",
+  "jkt48_cathy",
+  "jkt48_cynthia",
+  "jkt48_daisy",
+  "jkt48_indira",
+  "jkt48_eli",
+  "jkt48_michie",
+  "jkt48_gracia",
+  "jkt48_ella",
+  "jkt48_adel",
+  "jkt48_feni",
+  "jkt48_marsha",
+  "jkt48_zee",
+  "jkt48_lyn",
+  "jkt48_indah",
+  "jkt48_elin",
+  "jkt48_chelsea",
+  "jkt48_danella",
+  "jkt48_gendis",
+  "jkt48_gracie",
+  "jkt48_greesel",
+  "jkt48_flora",
+  "jkt48_olla",
+  "jkt48_kathrina",
+  "jkt48_oniel",
+  "jkt48_fiony",
+  "jkt48_callie",
+  "jkt48_alya",
+  "jkt48_anindya",
+  "jkt48_jeane",
+  "jkt48-official",
+  "jkt48_nala",
+  "jkt48_aralie",
+  "jkt48_delynn",
+  "jkt48_lana",
+  "jkt48_erine",
+  "jkt48_fritzy",
+  "jkt48_lily",
+  "jkt48_trisha",
+  "jkt48_moreen",
+  "jkt48_levi",
+  "jkt48_nayla",
+  "jkt48_nachia",
+  "jkt48_oline",
+  "jkt48_regie",
+  "jkt48_ribka",
+  "jkt48_kimmy",
+  "jkt48_intan",
+  "jkt48_maira",
+  "jkt48_virgi",
+  "jkt48_auwia",
+  "jkt48_rilly",
+  "jkt48_giaa",
+  "jkt48_ekin",
+  "jkt48_jemima",
+  "jkt48_mikaela",
+];
+
+router.get('/showroom', async (req, res) => {
+  try {
+    const filteredLive = await showroomService.getFilteredLive();
+    res.json(filteredLive);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch data' });
+  }
+});
+
+router.get("/idn", async (req, res) => {
+  try {
+    const filteredData = await filterIDNLivesByUsernames(jkt48Usernames);
+
+    if (filteredData.length === 0) {
+      res.json([]);
+    } else {
+      res.json(filteredData);
+    }
+  } catch (error) {
+    console.error("Error fetching IDN lives:", error);
+    res.status(500).json({ error: "Failed to fetch IDN lives" });
+  }
+});
 
 router.get("/schedule", async (req, res) => {
   try {
