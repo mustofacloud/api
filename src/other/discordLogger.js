@@ -15,7 +15,7 @@ const sendLogToDiscord = async (logMessage, logType = "Info", requestData = {}) 
     const safe = (v) => (v ? String(v) : "N/A");
 
     const payload = {
-      username: "JKT48 Logger",
+      username: "UNV48 API",
       avatar_url: botAvatarUrl || undefined,
       embeds: [
         {
@@ -24,7 +24,7 @@ const sendLogToDiscord = async (logMessage, logType = "Info", requestData = {}) 
           color: logType.toLowerCase() === "error" ? 0xff0000 : 0x00ff00,
           timestamp: currentTime,
           footer: {
-            text: "JKT48 API Logger",
+            text: "UNV48 API Logger",
             icon_url: botAvatarUrl || undefined,
           },
           fields: [
