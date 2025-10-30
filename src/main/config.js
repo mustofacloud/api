@@ -1,6 +1,6 @@
 // config.js
 module.exports = {
-  discordWebhookUrl: "https://discord.com/api/v10/webhooks/1433245833385742498/_v-FiOo7-GmOKEUkTBvFInA33FL29NWTRNR1Bcz8ZhQDFlUKzlRXUJFYnvXpSxJWzpwj",
+  discordWebhookUrl: "https://discord.com/api/webhooks/1433263008116768978/U8uldGU0b7MTVfvHcke0uJnmtuJAAKJ3FwNVe7CUVSyvVkKfi8vM07pM2zqqnG4h7mLz",
   botAvatarUrl:
     ".....",
   maintenanceMode: false,
