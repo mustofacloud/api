@@ -63,8 +63,8 @@ app.get("/", (req, res) => {
   const logMessage = `Welcome message sent to ${req.ip}.`;
   sendLogToDiscord(logMessage);
   res.send({
-    message: "Welcome To JKT48 WEB API",
-    author: "https://github.com/mastopa",
+    message: "🖥️ UNV48 WEB API",
+    author: "https://github.com/mustofacloud",
   });
 });
 
