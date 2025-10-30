@@ -1,8 +1,8 @@
 // config.js
 module.exports = {
-  discordWebhookUrl: "....",
+  discordWebhookUrl: "https://discord.com/api/v10/webhooks/1433245833385742498/_v-FiOo7-GmOKEUkTBvFInA33FL29NWTRNR1Bcz8ZhQDFlUKzlRXUJFYnvXpSxJWzpwj",
   botAvatarUrl:
     ".....",
   maintenanceMode: false,
-  port: 3000,
+  port: 1200,
 };
