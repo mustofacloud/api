@@ -110,6 +110,8 @@ router.get("/idn", async (req, res) => {
     }
   } catch (error) {
     console.error("Error fetching IDN lives:", error);
+    const errorMessage = `Scraping schedule failed. Error: ${error.message}`;
+    sendLogToDiscord(errorMessage, "Error");
     res.status(500).json({ error: "Failed to fetch IDN lives" });
   }
 });
