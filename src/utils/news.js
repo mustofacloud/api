@@ -60,51 +60,57 @@ const fetchNewsData = async () => {
 
 const parseNewsData = (html) => {
   if (!html || html.length < 500) {
-    console.error("DEBUG HTML SHORT:", html.substring(0, 300));
-    throw new Error("HTML kosong / terlalu pendek (kemungkinan kena Cloudflare).");
+    console.error("❌ HTML terlalu pendek, kemungkinan kena Cloudflare.");
+    throw new Error("HTML invalid.");
   }
 
   const $ = cheerio.load(html);
   const data_list_berita = [];
 
-  console.log("✅ Mulai parsing data berita...");
+  console.log("✅ Mulai parsing...");
 
-  $("ul.entry-news__list > li").each((index, element) => {
-    const el = $(element);
+  $(".entry-news__list").each((index, container) => {
+    const berita = $(container);
 
-    const waktu = el.find("time").text().trim();
-    const judul = el.find("h3").text().trim();
-    const url = el.find("h3 > a").attr("href");
+    const badge_img =
+      berita.find(".entry-news__list--label img").attr("src") || null;
+
+    const item = berita.find(".entry-news__list--item");
+    const judul = item.find("h3").text().trim();
+    const waktu = item.find("time").text().trim();
+    const url = item.find("h3 > a").attr("href");
 
     if (!url) {
-      console.warn(`⚠️ [${index}] URL tidak ditemukan, skip`);
+      console.warn(`⚠️ [${index}] Tidak dapat mengambil URL, skip`);
       return;
     }
 
     const berita_id = url
-      .replace("?lang=id", "")
-      .replace("/news/detail/id/", "");
+      .replace("/news/detail/id/", "")
+      .replace("?lang=id", "");
 
-    const item = {
+    const data = {
       index,
-      waktu,
       judul,
+      waktu,
       berita_id,
+      badge_url: badge_img ? "https://jkt48.com" + badge_img : null,
       source_url: "https://jkt48.com" + url,
     };
 
-    // ✅ DEBUG setiap data yang berhasil diambil
-    console.log(`📌 Parsed berita [${index}] →`, item);
+    console.log(`📌 Parsed [${index}] →`, data);
 
-    data_list_berita.push(item);
+    data_list_berita.push(data);
   });
 
-  console.log("🔍 Total berita yang berhasil di-parse:", data_list_berita.length);
+  console.log(`🔍 Total berita berhasil diparse: ${data_list_berita.length}`);
 
   if (data_list_berita.length === 0) {
-    console.error("❌ Tidak ada data berita. Selector mungkin berubah.");
-    console.error("DEBUG HTML:", html.substring(0, 400)); // tampilkan sample HTML
-    throw new Error("Data berita tidak ditemukan (cek selector).");
+    console.error(
+      "❌ Selector sudah benar, tetapi tidak ada berita yang ditemukan."
+    );
+    console.log("DEBUG HTML:", html.substring(0, 400));
+    throw new Error("Tidak ada data berita.");
   }
 
   return { berita: data_list_berita };
@@ -112,65 +118,55 @@ const parseNewsData = (html) => {
 
 const fetchNewsDetail = async (berita_id) => {
   const url = `https://jkt48.com/news/detail/id/${berita_id}?lang=id`;
+
   try {
     const html = await fetchWithCloudscraper(url);
     const $ = cheerio.load(html);
+
+    console.log("[DEBUG] Fetch detail:", url);
+
     const detail = {};
 
-    const mainContentSelector =
-      "body > div.container > div.row > div.col-lg-9.order-1.order-lg-2.entry-contents__main-area > div > div";
-    const mainContent = $(mainContentSelector);
+    // ✅ Ambil container utama berdasarkan struktur baru
+    const contentDiv = $(".entry-news__detail > div:nth-of-type(4)");
 
-    if (mainContent.length === 0) {
-      throw new Error("Konten utama tidak ditemukan.");
+    if (contentDiv.length === 0) {
+      console.error(
+        "❌ Selector konten detail tidak ditemukan. Dumping HTML untuk debug:"
+      );
+      console.log(html.substring(0, 500)); // print sebagian HTML
+      return null;
     }
 
+    // ✅ Ambil teks & list
     let deskripsi = "";
-    mainContent.find("p.MsoNormal, ul, ol").each((index, element) => {
-      const tagName = $(element).prop("tagName").toLowerCase();
+    contentDiv.find("p, ul, ol, li").each((i, el) => {
+      const tag = $(el).prop("tagName").toLowerCase();
 
-      if (tagName === "p") {
-        deskripsi += $(element).text().trim() + "\n";
-      } else if (tagName === "ul" || tagName === "ol") {
-        $(element)
-          .children()
-          .each((i, child) => {
-            deskripsi += $(child).text().trim() + "\n";
-          });
-      }
+      if (tag === "p") deskripsi += $(el).text().trim() + "\n";
+      if (tag === "li") deskripsi += "- " + $(el).text().trim() + "\n";
     });
 
     detail["deskripsi"] = deskripsi.trim();
 
+    // ✅ Ambil gambar dalam konten
     const gambarList = [];
-    mainContent
-      .find('span[lang="EN-GB"], span[lang="EN"]')
-      .each((index, element) => {
-        const gambarElement = $(element).find("img");
-        if (gambarElement.length === 0) {
-          const nextImg = $(element).next("img");
-          if (nextImg.length > 0) {
-            gambarElement.push(nextImg[0]);
-          }
-        }
-
-        gambarElement.each((i, img) => {
-          const gambar = {
-            title: $(img).attr("title"),
-            src: $(img).attr("src"),
-            width: $(img).attr("width"),
-            height: $(img).attr("height"),
-          };
-          gambarList.push(gambar);
-        });
-      });
+    contentDiv.find("img").each((i, img) => {
+      const src = $(img).attr("src");
+      if (src) {
+        gambarList.push(
+          src.startsWith("http") ? src : `https://jkt48.com${src}` // fix relative path
+        );
+      }
+    });
 
     detail["gambar"] = gambarList;
+
+    console.log("[DEBUG] Detail berita parsed:", detail);
+
     return detail;
   } catch (error) {
-    console.error(
-      `Error fetching detail for berita_id ${berita_id}: ${error.message}`
-    );
+    console.error("❌ Error fetch detail:", error.message);
     return null;
   }
 };
