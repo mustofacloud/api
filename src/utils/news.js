@@ -59,44 +59,53 @@ const fetchNewsData = async () => {
 };
 
 const parseNewsData = (html) => {
-  const $ = cheerio.load(html);
-  const list_berita_mentah = $(".entry-news__list");
-
-  if (!list_berita_mentah || list_berita_mentah.length === 0) {
-    throw new Error("No news data found on the page.");
+  if (!html || html.length < 500) {
+    console.error("DEBUG HTML SHORT:", html.substring(0, 300));
+    throw new Error("HTML kosong / terlalu pendek (kemungkinan kena Cloudflare).");
   }
 
+  const $ = cheerio.load(html);
   const data_list_berita = [];
-  list_berita_mentah.each((index, element) => {
-    const model = {};
-    const berita_mentah = $(element);
 
-    const badge_div = berita_mentah.find(".entry-news__list--label");
-    const badge_img = badge_div.find("img");
-    if (badge_img.attr("src")) {
-      model["badge_url"] = badge_img.attr("src");
+  console.log("✅ Mulai parsing data berita...");
+
+  $("ul.entry-news__list > li").each((index, element) => {
+    const el = $(element);
+
+    const waktu = el.find("time").text().trim();
+    const judul = el.find("h3").text().trim();
+    const url = el.find("h3 > a").attr("href");
+
+    if (!url) {
+      console.warn(`⚠️ [${index}] URL tidak ditemukan, skip`);
+      return;
     }
 
-    const title_div = berita_mentah.find(".entry-news__list--item");
-    const waktu = title_div.find("time").text().trim();
-    model["waktu"] = waktu;
-
-    const judul = title_div.find("h3").text().trim();
-    model["judul"] = judul;
-
-    const url_berita_full = title_div.find("h3").find("a").attr("href");
-    if (!url_berita_full) {
-      console.warn("Missing URL for a news item. Skipping.");
-      return; // Skip
-    }
-
-    const url_berita_full_rplc = url_berita_full
+    const berita_id = url
       .replace("?lang=id", "")
       .replace("/news/detail/id/", "");
-    model["berita_id"] = url_berita_full_rplc;
 
-    data_list_berita.push(model);
+    const item = {
+      index,
+      waktu,
+      judul,
+      berita_id,
+      source_url: "https://jkt48.com" + url,
+    };
+
+    // ✅ DEBUG setiap data yang berhasil diambil
+    console.log(`📌 Parsed berita [${index}] →`, item);
+
+    data_list_berita.push(item);
   });
+
+  console.log("🔍 Total berita yang berhasil di-parse:", data_list_berita.length);
+
+  if (data_list_berita.length === 0) {
+    console.error("❌ Tidak ada data berita. Selector mungkin berubah.");
+    console.error("DEBUG HTML:", html.substring(0, 400)); // tampilkan sample HTML
+    throw new Error("Data berita tidak ditemukan (cek selector).");
+  }
 
   return { berita: data_list_berita };
 };
