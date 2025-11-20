@@ -1,9 +1,5 @@
 // news.js — versi bypass Cloudflare menggunakan cloudscraper
-// ----------------------------------------------------------
-// Install:
-//   npm install cloudscraper cheerio
-// ----------------------------------------------------------
-
+//-----------------------------------------------------------
 const cloudscraper = require("cloudscraper");
 const cheerio = require("cheerio");
 
@@ -17,49 +13,42 @@ function randomUserAgent() {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
-// --------------------------------------------------------------------
-
 const defaultHeaders = {
   "Accept-Language": "en-US,en;q=0.9",
-  Referer: "https://google.com/",
+  Referer: "https://google.com/"
 };
 
-// Fetch wrapper menggunakan cloudscraper
 const fetchWithCloudscraper = async (url, retries = 3) => {
-  let lastError;
+  let error;
   for (let i = 0; i < retries; i++) {
     try {
       return await cloudscraper.get({
         uri: url,
-        headers: {
+        headers: { 
           ...defaultHeaders,
-          "User-Agent": randomUserAgent(),
+          "User-Agent": randomUserAgent()
         },
-        gzip: true,
+        gzip: true
       });
     } catch (err) {
-      lastError = err;
-      console.warn(`⚠️ Retry (${i + 1}/${retries}): ${err.message}`);
-      await new Promise((r) => setTimeout(r, 700 * (i + 1)));
+      error = err;
+      await new Promise(r => setTimeout(r, 700 * (i + 1)));
     }
   }
-  throw new Error(`Gagal fetch: ${lastError.message}`);
-};
-
-// ===================== FETCH LIST =====================
-
-const fetchNewsData = async () => {
-  const url = "https://jkt48.com/news/list?lang=id";
-  return await fetchWithCloudscraper(url);
+  throw new Error(error.message);
 };
 
 // ===================== PARSE LIST =====================
+
+const fetchNewsData = async () => {
+  return await fetchWithCloudscraper("https://jkt48.com/news/list?lang=id");
+};
 
 const parseNewsData = (html) => {
   const $ = cheerio.load(html);
   const list = [];
 
-  $(".entry-news__list").each((index, el) => {
+  $(".entry-news__list").each((i, el) => {
     const item = $(el);
 
     const badge = item.find(".entry-news__list--label img").attr("src");
@@ -72,21 +61,21 @@ const parseNewsData = (html) => {
     const berita_id = href.replace("/news/detail/id/", "").replace("?lang=id", "");
 
     list.push({
-      index,
+      index: i,
       judul: title,
       waktu,
       berita_id,
       badge_url: badge ? "https://jkt48.com" + badge : null,
       source_url: "https://jkt48.com" + href,
-      detail: null, // default null
+      detail: null, // akan diisi STRING, bukan object
+      image: []     // akan diisi array gambar
     });
   });
 
-  return { berita: list };
+  return list;
 };
 
-// ===================== FETCH DETAIL =====================
-// Sesuai struktur respon.json yang kamu upload
+// ===================== PARSE DETAIL =====================
 
 const fetchNewsDetail = async (berita_id) => {
   const url = `https://jkt48.com/news/detail/id/${berita_id}?lang=id`;
@@ -96,31 +85,17 @@ const fetchNewsDetail = async (berita_id) => {
     const $ = cheerio.load(html);
 
     const root = $(".entry-news__detail");
+    if (root.length === 0) return { detail: "", image: [] };
 
-    if (root.length === 0) {
-      console.error("❌ '.entry-news__detail' tidak ditemukan.");
-      return null;
-    }
-
-    // Title
-    const title = root.find("h3").first().text().trim();
-
-    // Date
-    const date = root.find(".metadata2").first().text().trim();
-
-    // URL
-    const fullUrl = url;
-
-    // ===================== PARAGRAPH =====================
+    // Ambil paragraf
     const paragraphs = [];
     root.find("p").each((i, el) => {
       const t = $(el).text().trim();
       if (t) paragraphs.push(t);
     });
-
     const detailText = paragraphs.join("\n\n");
 
-    // ===================== IMAGES =====================
+    // Ambil gambar
     const images = [];
     root.find("img").each((i, img) => {
       let src = $(img).attr("src");
@@ -129,26 +104,38 @@ const fetchNewsDetail = async (berita_id) => {
       images.push(src);
     });
 
-    // ===================== FINAL FORMAT =====================
     return {
-      id: berita_id,
-      title: title,
-      url: fullUrl,
-      date: date,
-      detail: detailText,
-      image: images,
+      detail: detailText, // STRING SAJA
+      image: images
     };
 
   } catch (err) {
-    console.error(`❌ Detail error (${berita_id}):`, err.message);
-    return null;
+    return { detail: "", image: [] };
   }
 };
 
-// ===================== EXPORT =====================
+// =================== LIST + DETAIL ===================
+
+const attachDetailToList = async () => {
+  const html = await fetchNewsData();
+  const list = parseNewsData(html);
+
+  for (let i = 0; i < list.length; i++) {
+    const d = await fetchNewsDetail(list[i].berita_id);
+
+    list[i].detail = d.detail; // STRING
+    list[i].image = d.image;   // ARRAY
+  }
+
+  return list;
+};
+
+// =======================================================
 
 module.exports = {
   fetchNewsData,
   parseNewsData,
   fetchNewsDetail,
+  attachDetailToList
 };
+        
