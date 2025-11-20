@@ -1,8 +1,8 @@
 // news.js — versi bypass Cloudflare menggunakan cloudscraper
-// ---------------------------------------------
-// Install dulu:
+// ----------------------------------------------------------
+// Install:
 //   npm install cloudscraper cheerio
-// ---------------------------------------------
+// ----------------------------------------------------------
 
 const cloudscraper = require("cloudscraper");
 const cheerio = require("cheerio");
@@ -17,18 +17,19 @@ function randomUserAgent() {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
-// Konfigurasi header umum
+// --------------------------------------------------------------------
+
 const defaultHeaders = {
   "Accept-Language": "en-US,en;q=0.9",
   Referer: "https://google.com/",
 };
 
-// Fungsi fetch dengan cloudscraper (bisa retry otomatis)
+// Fetch wrapper menggunakan cloudscraper
 const fetchWithCloudscraper = async (url, retries = 3) => {
   let lastError;
   for (let i = 0; i < retries; i++) {
     try {
-      const html = await cloudscraper.get({
+      return await cloudscraper.get({
         uri: url,
         headers: {
           ...defaultHeaders,
@@ -36,85 +37,56 @@ const fetchWithCloudscraper = async (url, retries = 3) => {
         },
         gzip: true,
       });
-      return html;
     } catch (err) {
       lastError = err;
-      console.warn(`⚠️ Gagal ambil data (${i + 1}/${retries}): ${err.message}`);
-      await new Promise((r) => setTimeout(r, 1000 * (i + 1))); // backoff delay
+      console.warn(`⚠️ Retry (${i + 1}/${retries}): ${err.message}`);
+      await new Promise((r) => setTimeout(r, 700 * (i + 1)));
     }
   }
-  throw new Error(`Gagal fetch dari ${url}: ${lastError.message}`);
+  throw new Error(`Gagal fetch: ${lastError.message}`);
 };
 
-// =================== BAGIAN UTAMA ===================
+// ===================== FETCH LIST =====================
 
 const fetchNewsData = async () => {
   const url = "https://jkt48.com/news/list?lang=id";
-  try {
-    const html = await fetchWithCloudscraper(url);
-    return html;
-  } catch (error) {
-    throw new Error(`Error fetching data: ${error.message}`);
-  }
+  return await fetchWithCloudscraper(url);
 };
+
+// ===================== PARSE LIST =====================
 
 const parseNewsData = (html) => {
-  if (!html || html.length < 500) {
-    console.error("❌ HTML terlalu pendek, kemungkinan kena Cloudflare.");
-    throw new Error("HTML invalid.");
-  }
-
   const $ = cheerio.load(html);
-  const data_list_berita = [];
+  const list = [];
 
-  console.log("✅ Mulai parsing...");
+  $(".entry-news__list").each((index, el) => {
+    const item = $(el);
 
-  $(".entry-news__list").each((index, container) => {
-    const berita = $(container);
+    const badge = item.find(".entry-news__list--label img").attr("src");
+    const title = item.find(".entry-news__list--item h3").text().trim();
+    const waktu = item.find(".entry-news__list--item time").text().trim();
+    const href = item.find(".entry-news__list--item h3 a").attr("href");
 
-    const badge_img =
-      berita.find(".entry-news__list--label img").attr("src") || null;
+    if (!href) return;
 
-    const item = berita.find(".entry-news__list--item");
-    const judul = item.find("h3").text().trim();
-    const waktu = item.find("time").text().trim();
-    const url = item.find("h3 > a").attr("href");
+    const berita_id = href.replace("/news/detail/id/", "").replace("?lang=id", "");
 
-    if (!url) {
-      console.warn(`⚠️ [${index}] Tidak dapat mengambil URL, skip`);
-      return;
-    }
-
-    const berita_id = url
-      .replace("/news/detail/id/", "")
-      .replace("?lang=id", "");
-
-    const data = {
+    list.push({
       index,
-      judul,
+      judul: title,
       waktu,
       berita_id,
-      badge_url: badge_img ? "https://jkt48.com" + badge_img : null,
-      source_url: "https://jkt48.com" + url,
-    };
-
-    console.log(`📌 Parsed [${index}] →`, data);
-
-    data_list_berita.push(data);
+      badge_url: badge ? "https://jkt48.com" + badge : null,
+      source_url: "https://jkt48.com" + href,
+      detail: null, // default null
+    });
   });
 
-  console.log(`🔍 Total berita berhasil diparse: ${data_list_berita.length}`);
-
-  if (data_list_berita.length === 0) {
-    console.error(
-      "❌ Selector sudah benar, tetapi tidak ada berita yang ditemukan."
-    );
-    console.log("DEBUG HTML:", html.substring(0, 400));
-    throw new Error("Tidak ada data berita.");
-  }
-
-  return { berita: data_list_berita };
+  return { berita: list };
 };
+
+// ===================== FETCH DETAIL =====================
+// Sesuai struktur respon.json yang kamu upload
 
 const fetchNewsDetail = async (berita_id) => {
   const url = `https://jkt48.com/news/detail/id/${berita_id}?lang=id`;
@@ -123,67 +95,60 @@ const fetchNewsDetail = async (berita_id) => {
     const html = await fetchWithCloudscraper(url);
     const $ = cheerio.load(html);
 
-    console.log("[DEBUG] Fetch detail:", url);
+    const root = $(".entry-news__detail");
 
-    const detail = {};
-
-    // ✅ Ambil container utama berdasarkan struktur baru
-    const contentDiv = $(".entry-news__detail > div:nth-of-type(4)");
-
-    if (contentDiv.length === 0) {
-      console.error(
-        "❌ Selector konten detail tidak ditemukan. Dumping HTML untuk debug:"
-      );
-      console.log(html.substring(0, 500)); // print sebagian HTML
+    if (root.length === 0) {
+      console.error("❌ '.entry-news__detail' tidak ditemukan.");
       return null;
     }
 
-    // ✅ Ambil teks & list
-    let deskripsi = "";
-    contentDiv.find("p, ul, ol, li").each((i, el) => {
-      const tag = $(el).prop("tagName").toLowerCase();
+    // Title
+    const title = root.find("h3").first().text().trim();
 
-      if (tag === "p") deskripsi += $(el).text().trim() + "\n";
-      if (tag === "li") deskripsi += "- " + $(el).text().trim() + "\n";
+    // Date
+    const date = root.find(".metadata2").first().text().trim();
+
+    // URL
+    const fullUrl = url;
+
+    // ===================== PARAGRAPH =====================
+    const paragraphs = [];
+    root.find("p").each((i, el) => {
+      const t = $(el).text().trim();
+      if (t) paragraphs.push(t);
     });
 
-    detail["deskripsi"] = deskripsi.trim();
+    const detailText = paragraphs.join("\n\n");
 
-    // ✅ Ambil gambar dalam konten
-    const gambarList = [];
-    contentDiv.find("img").each((i, img) => {
-      const src = $(img).attr("src");
-      if (src) {
-        gambarList.push(
-          src.startsWith("http") ? src : `https://jkt48.com${src}` // fix relative path
-        );
-      }
+    // ===================== IMAGES =====================
+    const images = [];
+    root.find("img").each((i, img) => {
+      let src = $(img).attr("src");
+      if (!src) return;
+      if (!src.startsWith("http")) src = "https://jkt48.com" + src;
+      images.push(src);
     });
 
-    detail["gambar"] = gambarList;
+    // ===================== FINAL FORMAT =====================
+    return {
+      id: berita_id,
+      title: title,
+      url: fullUrl,
+      date: date,
+      detail: detailText,
+      image: images,
+    };
 
-    console.log("[DEBUG] Detail berita parsed:", detail);
-
-    return detail;
-  } catch (error) {
-    console.error("❌ Error fetch detail:", error.message);
+  } catch (err) {
+    console.error(`❌ Detail error (${berita_id}):`, err.message);
     return null;
   }
 };
 
-const fetchAndParseNews = async () => {
-  try {
-    const html = await fetchNewsData();
-    const parsedData = parseNewsData(html);
-    return parsedData;
-  } catch (error) {
-    console.error(`Error parsing news: ${error.message}`);
-  }
-};
+// ===================== EXPORT =====================
 
 module.exports = {
   fetchNewsData,
   parseNewsData,
   fetchNewsDetail,
-  fetchAndParseNews,
 };
