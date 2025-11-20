@@ -134,23 +134,28 @@ router.get("/news", async (req, res) => {
   try {
     // Step 1: Fetch the news data
     const htmlData = await fetchNewsData();
-    const newsData = parseNewsData(htmlData);
+    const newsList = parseNewsData(htmlData);
 
-    if (!newsData || !newsData.berita || newsData.berita.length === 0) {
+    if (!newsList || newsList.length === 0) {
       throw new Error("No news data available for processing.");
     }
 
     // Step 2: Fetch details for each news item
-    const newsDetailsPromises = newsData.berita.map(async (item) => {
-      const detail = await fetchNewsDetail(item.berita_id);
-      return { ...item, detail }; // Combine news item with its detail
-    });
+    const finalNews = await Promise.all(
+      newsList.map(async (item) => {
+        const detailData = await fetchNewsDetail(item.berita_id);
 
-    // Step 3: Wait for all detail fetches to complete
-    const newsDetails = await Promise.all(newsDetailsPromises);
+        return {
+          ...item,
+          detail: detailData?.detail || "",   // string langsung
+          image: detailData?.image || []      // array gambar
+        };
+      })
+    );
 
-    // Send the combined data
-    res.json(newsDetails);
+    // Step 3: Send final result
+    res.json(finalNews);
+
   } catch (error) {
     console.error("Error fetching or parsing news data:", error);
     const errorMessage = `Scraping news failed. Error: ${error.message}`;
@@ -159,6 +164,7 @@ router.get("/news", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 
 
 router.get("/events", async (req, res) => {
