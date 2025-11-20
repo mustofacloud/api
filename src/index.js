@@ -68,7 +68,3 @@ app.get("/", (req, res) => {
     repository: "https://github.com/mustofacloud"
   });
 });
-
-app.listen(config.port, () => {
-  console.log(`Server is running at http://localhost:${config.port}`);
-});
