@@ -1,3 +1,4 @@
+// src/index.js
 const express = require("express");
 const cors = require("cors");
 const routes = require("./routes/routes");
@@ -6,65 +7,55 @@ const config = require("./main/config");
 
 const app = express();
 
+// Maintenance middleware
 app.use((req, res, next) => {
-  if (config.maintenanceMode) {
-    const logMessage = `Service temporarily unavailable due to maintenance. Request from ${req.ip} blocked.`;
-    sendLogToDiscord(logMessage, "Error");
-    res.status(503).send({
-      message: "Service temporarily unavailable due to maintenance.",
-    });
-  } else {
+    if (config.maintenanceMode) {
+        sendLogToDiscord(
+            `Service temporarily unavailable. Request from ${req.ip} blocked.`,
+            "Error"
+        );
+        return res.status(503).json({
+            message: "Service temporarily unavailable due to maintenance.",
+        });
+    }
     next();
-  }
 });
 
+// Logging middleware
 app.use((req, res, next) => {
-  const startTime = new Date();
+    const startTime = new Date();
 
-  res.on("finish", () => {
-    const endTime = new Date();
-    const responseTime = endTime - startTime;
+    res.on("finish", () => {
+        const endTime = new Date();
+        const responseTime = endTime - startTime;
 
-    const requestData = {
-      method: req.method,
-      url: req.originalUrl,
-      responseTime,
-    };
+        sendLogToDiscord(
+            `Request handled. Method: ${req.method}, URL: ${req.originalUrl}`,
+            "Info",
+            { responseTime }
+        );
+    });
 
-    const logMessage = `Request handled successfully. Method: ${req.method}, URL: ${req.originalUrl}`;
-    sendLogToDiscord(logMessage, "Info", requestData);
-  });
-
-  next();
+    next();
 });
 
-const enableMaintenanceMode = () => {
-  // Check if maintenanceMode is already false
-  if (!config.maintenanceMode) {
-    const logMessage = "Maintenance mode disabled.";
-    sendLogToDiscord(logMessage, "Info");
-    return;
-  }
-
-  config.maintenanceMode;
-
-  const logBeforeMessage = "Maintenance mode about to be disabled.";
-  const logAfterMessage = "Maintenance mode enabled.";
-  sendLogToDiscord(logBeforeMessage, "Info");
-  sendLogToDiscord(logAfterMessage, "Info");
-};
-
-enableMaintenanceMode();
-
+// Enable CORS
 app.use(cors());
+
+// Router
 app.use("/api", routes);
 
+// Homepage endpoint
 app.get("/", (req, res) => {
-  const logMessage = `Welcome message sent to ${req.ip}.`;
-  sendLogToDiscord(logMessage);
-  res.send({
-    message: "🖥️ UNV48 WEB API",
-    author: "MasThopa",
-    repository: "https://github.com/mustofacloud"
-  });
+    sendLogToDiscord(`Welcome message sent to ${req.ip}.`);
+    res.json({
+        message: "🖥️ UNV48 WEB API",
+        author: "https://github.com/mustofacloud",
+    });
 });
+
+// ❗ IMPORTANT: NO app.listen here!
+// Vercel will handle the server start.
+
+// Export Express instance for Vercel
+module.exports = app;
