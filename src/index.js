@@ -64,7 +64,8 @@ app.get("/", (req, res) => {
   sendLogToDiscord(logMessage);
   res.send({
     message: "🖥️ UNV48 WEB API",
-    author: "https://github.com/mustofacloud",
+    author: "MasThopa",
+    repository: "https://github.com/mustofacloud"
   });
 });
 
